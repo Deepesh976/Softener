@@ -3,73 +3,77 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './components/auth/login';
 import Navbar from './components/Navbar/navbar';
 import Devices from './pages/devices';
-import user from './pages/user';
+import User from './pages/user';
 import DeviceRegenHistory from './pages/deviceRegenHistory';
 import DeviceAnalysis from './pages/deviceAnalysis';
 import EditDevices from './pages/editdevices';
-import Edituser from './pages/edituser';
+import EditUser from './pages/edituser';
+import ProtectedRoute from './components/auth/ProtectedRoute'; // ✅ Import protected route
+
+const WithNavbar = ({ Component }) => (
+  <>
+    <Navbar />
+    <div style={{ paddingTop: '70px' }}>
+      <Component />
+    </div>
+  </>
+);
 
 const AppContent = () => {
   return (
-    <>
-      <Routes>
-        <Route path="/" element={<Login />} />
-        <Route
-          path="/devices"
-          element={
-            <>
-              <Navbar />
-              <Devices />
-            </>
-          }
-        />
-        <Route
-          path="/deviceRegenHistory"
-          element={
-            <>
-              <Navbar />
-              <DeviceRegenHistory />
-            </>
-          }
-        />
-        <Route
-          path="/deviceAnalysis"
-          element={
-            <>
-              <Navbar />
-              <DeviceAnalysis />
-            </>
-          }
-        />
-        <Route
-          path="/editdevices"
-          element={
-            <>
-              <Navbar />
-              <EditDevices />
-            </>
-          }
-        />
-        <Route
-          path="/user"
-          element={
-            <>
-              <Navbar />
-              <user />
-            </>
-          }
-        />
-        <Route
-          path="/edituser"
-          element={
-            <>
-              <Navbar />
-              <Edituser />
-            </>
-          }
-        />
-      </Routes>
-    </>
+    <Routes>
+      <Route path="/" element={<Login />} />
+
+      {/* Protected Routes - wrap them */}
+      <Route
+        path="/devices"
+        element={
+          <ProtectedRoute>
+            <WithNavbar Component={Devices} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/deviceRegenHistory"
+        element={
+          <ProtectedRoute>
+            <WithNavbar Component={DeviceRegenHistory} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/deviceAnalysis"
+        element={
+          <ProtectedRoute>
+            <WithNavbar Component={DeviceAnalysis} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/editdevices"
+        element={
+          <ProtectedRoute>
+            <WithNavbar Component={EditDevices} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/user"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <WithNavbar Component={User} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/edituser"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <WithNavbar Component={EditUser} />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
   );
 };
 

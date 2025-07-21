@@ -138,7 +138,7 @@ const EditUser = () => {
 // Styles
 const styles = {
   container: {
-    paddingTop: '100px',
+    paddingTop: '20px',
     paddingBottom: '30px',
     display: 'flex',
     justifyContent: 'center',

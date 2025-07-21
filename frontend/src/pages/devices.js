@@ -3,270 +3,293 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const Devices = () => {
-  const [devices, setDevices] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState('');
+  const [phoneNo, setPhoneNo] = useState('');
   const [deviceId, setDeviceId] = useState('');
-  const [user, setUser] = useState('');
-  const [phoneNo, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [message, setMessage] = useState('');
+  const [devices, setDevices] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
+    fetchUsers();
     fetchDevices();
   }, []);
 
-  const fetchDevices = () => {
-    axios
-      .get('http://localhost:5000/api/devices/registered')
-      .then((res) => setDevices(res.data))
-      .catch((err) => console.error('Error fetching device data:', err));
+  const fetchUsers = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/user/all');
+      setUsers(res.data);
+    } catch (error) {
+      alert('Error fetching users');
+    }
   };
 
-  const handleDelete = async (id) => {
-  try {
-    const response = await fetch(`http://localhost:5000/api/devices/registered/${id}`, {
-      method: 'DELETE',
-    });
-
-    if (response.ok) {
-      alert('Device deleted successfully');
-      // Optionally refresh list or remove the item from state
-      window.location.reload(); // OR filter from local state
-    } else {
-      const data = await response.json();
-      alert(`Failed to delete: ${data.message || 'Unknown error'}`);
+  const fetchDevices = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/devices/all');
+      setDevices(res.data);
+    } catch (error) {
+      alert('Error fetching devices');
     }
-  } catch (error) {
-    console.error('Delete error:', error);
-    alert('Delete failed due to a network error');
-  }
-};
+  };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!deviceId || !user || !phoneNo || !password || !confirmPassword) {
-      setMessage('❌ Please fill in all fields');
-      return;
-    }
+  const handleUserChange = (e) => {
+    const username = e.target.value;
+    setSelectedUser(username);
+    const matched = users.find((u) => u.user === username);
+    setPhoneNo(matched ? matched.phoneNo : '');
+  };
 
-    if (password !== confirmPassword) {
-      setMessage('❌ Passwords do not match');
-      return;
+  const handleRegister = async () => {
+    const trimmedDeviceId = deviceId.trim().toUpperCase();
+    if (!trimmedDeviceId || !selectedUser || !phoneNo) {
+      return alert('Please fill all fields');
     }
 
     try {
-const res = await axios.post('http://localhost:5000/api/devices/registered', {
-  deviceId,
-  user,
-  phoneNo: phoneNo,
-  password,
-  confirmPassword,
-});
-      setMessage(`✅ ${res.data.message}`);
+      await axios.post('http://localhost:5000/api/devices/registered', {
+        deviceId: trimmedDeviceId,
+        user: selectedUser,
+        phoneNo,
+      });
+
+      alert('Device Registered Successfully');
       setDeviceId('');
-      setUser('');
-      setPhone('');
-      setPassword('');
-      setConfirmPassword('');
+      setSelectedUser('');
+      setPhoneNo('');
       fetchDevices();
     } catch (err) {
-      setMessage(err.response?.data?.message || '❌ Failed to add device');
+      alert(err.response?.data?.message || 'Registration failed');
     }
   };
 
-  const permanentlyDelete = async (id) => {
-    if (window.confirm('Are you sure you want to permanently delete this device?')) {
-      try {
-        await axios.delete(`http://localhost:5000/api/devices/registered/${id}`);
-        setMessage('✅ Device permanently deleted');
-        fetchDevices();
-      } catch (error) {
-        console.error('Error deleting device:', error);
-        setMessage('❌ Failed to delete device');
-      }
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this device?')) return;
+
+    try {
+      await axios.delete(`http://localhost:5000/api/devices/${id}`);
+      fetchDevices();
+      alert('Device deleted successfully');
+    } catch (error) {
+      alert('Error deleting device');
     }
   };
 
-  const cellStyle = {
-    padding: '12px',
-    border: '1px solid #ddd',
-    textAlign: 'center',
-    fontSize: '14px',
+  const handleEdit = (device) => {
+    navigate(`/editdevices`, { state: { device } });
   };
+
+  const filteredDevices = devices.filter(
+    (d) =>
+      d.deviceId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      d.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      d.phoneNo.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-  <div
-    style={{
-      padding: '80px 20px 30px',
-      fontFamily: 'Poppins, sans-serif',
-      backgroundColor: '#f9f9f9',
-      minHeight: '100vh',
-      boxSizing: 'border-box',
-    }}
-  >
-    <h2
-      style={{
-        fontSize: '2rem',
-        color: '#003366',
-        marginBottom: '1rem',
-        textAlign: 'center',
-      }}
-    >
-      Device Registration
-    </h2>
+    <div style={styles.page}>
+      <div style={styles.container}>
+        <h2 style={styles.title}>Register Device</h2>
 
-    <form
-      onSubmit={handleSubmit}
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-        gap: '1rem',
-        backgroundColor: '#fff',
-        padding: '20px',
-        borderRadius: '10px',
-        boxShadow: '0 0 8px rgba(0,0,0,0.05)',
-        marginBottom: '1.5rem',
-      }}
-    >
-      {[
-        { label: 'Device ID', value: deviceId, setter: setDeviceId, type: 'text', placeholder: 'Enter Device ID' },
-        { label: 'User', value: user, setter: setUser, type: 'text', placeholder: 'Enter User Name' },
-        { label: 'Phone No', value: phoneNo, setter: setPhone, type: 'number', placeholder: 'Enter Phone No' },
-        { label: 'Password', value: password, setter: setPassword, type: 'password', placeholder: 'Enter Password' },
-        { label: 'Confirm Password', value: confirmPassword, setter: setConfirmPassword, type: 'password', placeholder: 'Confirm Password' },
-      ].map((field, idx) => (
-        <div key={idx} style={{ display: 'flex', flexDirection: 'column' }}>
-          <label style={{ marginBottom: '6px', fontWeight: '500' }}>{field.label}</label>
+        <div style={styles.searchRow}>
           <input
-            type={field.type}
-            value={field.value}
-            onChange={(e) => field.setter(e.target.value)}
-            placeholder={field.placeholder}
-            style={{
-              padding: '10px',
-              borderRadius: '6px',
-              border: '1px solid #ccc',
-              fontSize: '14px',
-            }}
+            type="text"
+            placeholder="Search by user, phone or device ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={styles.searchInput}
           />
         </div>
-      ))}
 
-      <div style={{ gridColumn: '1 / -1', textAlign: 'center', marginTop: '10px' }}>
-        <button
-          type="submit"
-          style={{
-            padding: '10px 24px',
-            backgroundColor: '#28a745',
-            color: '#fff',
-            borderRadius: '6px',
-            border: 'none',
-            fontWeight: '600',
-            fontSize: '16px',
-            cursor: 'pointer',
-            transition: 'background-color 0.2s ease',
-          }}
-          onMouseOver={(e) => (e.target.style.backgroundColor = '#218838')}
-          onMouseOut={(e) => (e.target.style.backgroundColor = '#28a745')}
-        >
-          Submit
-        </button>
+        <div style={styles.inlineForm}>
+          <select
+            value={selectedUser}
+            onChange={handleUserChange}
+            style={styles.input}
+          >
+            <option value="">-- Select User --</option>
+            {users.map((user) => (
+              <option key={user._id} value={user.user}>
+                {user.user}
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="text"
+            placeholder="Phone Number"
+            value={phoneNo}
+            readOnly
+            style={{ ...styles.input, backgroundColor: '#f5f5f5' }}
+          />
+
+          <input
+            type="text"
+            placeholder="Device ID"
+            value={deviceId}
+            onChange={(e) => setDeviceId(e.target.value.toUpperCase())}
+            style={styles.input}
+          />
+
+          <button style={styles.button} onClick={handleRegister}>
+            Register
+          </button>
+        </div>
+
+        <div style={styles.tableWrapper}>
+          <h3 style={styles.subHeading}>Registered Devices</h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={styles.table}>
+              <thead style={styles.thead}>
+                <tr>
+                  <th style={styles.th}>Device ID</th>
+                  <th style={styles.th}>User</th>
+                  <th style={styles.th}>Phone No</th>
+                  <th style={styles.th}>Registered At</th>
+                  <th style={styles.th}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredDevices.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" style={styles.emptyRow}>
+                      No devices found
+                    </td>
+                  </tr>
+                ) : (
+                  filteredDevices.map((d) => (
+                    <tr key={d._id}>
+                      <td style={styles.td}>{d.deviceId}</td>
+                      <td style={styles.td}>{d.user}</td>
+                      <td style={styles.td}>{d.phoneNo}</td>
+                      <td style={styles.td}>
+                        {new Date(d.registeredAt).toLocaleString()}
+                      </td>
+                      <td style={styles.td}>
+                        <button
+                          onClick={() => handleEdit(d)}
+                          style={{ ...styles.actionBtn, backgroundColor: '#ffc107' }}
+                        >
+                          Edit
+                        </button>{' '}
+                        <button
+                          onClick={() => handleDelete(d._id)}
+                          style={{ ...styles.actionBtn, backgroundColor: '#dc3545' }}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-    </form>
-
-    {message && (
-      <div
-        style={{
-          marginBottom: '1rem',
-          fontWeight: '600',
-          color: message.includes('✅') ? 'green' : 'red',
-          backgroundColor: '#fff',
-          padding: '10px 15px',
-          borderRadius: '6px',
-          boxShadow: '0 0 6px rgba(0,0,0,0.05)',
-        }}
-      >
-        {message}
-      </div>
-    )}
-
-    <div
-      style={{
-        overflowX: 'auto',
-        backgroundColor: '#fff',
-        padding: '20px',
-        borderRadius: '10px',
-        boxShadow: '0 0 8px rgba(0,0,0,0.05)',
-      }}
-    >
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px', minWidth: '600px' }}>
-        <thead>
-          <tr style={{ backgroundColor: '#f2f2f2' }}>
-            <th style={cellStyle}>Device ID</th>
-            <th style={cellStyle}>User</th>
-            <th style={cellStyle}>Phone No</th>
-            <th style={cellStyle}>Registered On</th>
-            <th style={cellStyle}>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {devices.length === 0 ? (
-            <tr>
-              <td style={cellStyle} colSpan="5">
-                No data available
-              </td>
-            </tr>
-          ) : (
-            devices.map((device) => (
-              <tr key={device._id}>
-                <td style={cellStyle}>{device.deviceId}</td>
-                <td style={cellStyle}>{device.user}</td>
-                <td style={cellStyle}>{device.phoneNo || 'N/A'}</td>
-                <td style={cellStyle}>
-                  {new Date(device.registeredAt || device.createdAt).toLocaleString('en-US')}
-                </td>
-                <td style={cellStyle}>
-                  <button
-                    onClick={() => navigate(`/editdevices?id=${device._id}`)}
-                    style={{
-                      marginRight: '8px',
-                      backgroundColor: '#007bff',
-                      color: '#fff',
-                      border: 'none',
-                      padding: '6px 12px',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                    }}
-                    onMouseOver={(e) => (e.target.style.backgroundColor = '#0056b3')}
-                    onMouseOut={(e) => (e.target.style.backgroundColor = '#007bff')}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(device._id)}
-                    style={{
-                      backgroundColor: '#dc3545',
-                      color: '#fff',
-                      border: 'none',
-                      padding: '6px 12px',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                    }}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
     </div>
-  </div>
-);
+  );
+};
+
+const styles = {
+  page: {
+    padding: '1px 20px 30px',
+    fontFamily: 'Poppins, sans-serif',
+    backgroundColor: '#f9f9f9',
+    minHeight: '100vh',
+  },
+  container: {
+    maxWidth: '1200px',
+    margin: '0 auto',
+  },
+  title: {
+    fontSize: '2rem',
+    color: '#003366',
+    marginBottom: '0.5rem',
+    textAlign: 'center',
+  },
+  searchRow: {
+    marginTop: '-3rem',
+    marginBottom: '10px',
+    display: 'flex',
+    justifyContent: 'flex-start',
+  },
+  searchInput: {
+    padding: '12px',
+    fontSize: '1rem',
+    borderRadius: '8px',
+    border: '1px solid #ccc',
+    width: '320px',
+    backgroundColor: '#fff',
+  },
+  inlineForm: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '1rem',
+    alignItems: 'center',
+    marginBottom: '2rem',
+  },
+  input: {
+    padding: '12px',
+    fontSize: '1rem',
+    borderRadius: '8px',
+    border: '1px solid #ccc',
+    minWidth: '200px',
+    flex: '1',
+  },
+  button: {
+    padding: '12px 24px',
+    fontSize: '1rem',
+    backgroundColor: '#007bff',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'background 0.3s',
+    whiteSpace: 'nowrap',
+  },
+  actionBtn: {
+    padding: '6px 12px',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    marginRight: '8px',
+  },
+  tableWrapper: {
+    backgroundColor: '#fff',
+    borderRadius: '12px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+    padding: '1.5rem',
+  },
+  subHeading: {
+    fontSize: '1.4rem',
+    color: '#333',
+    marginBottom: '1rem',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+  },
+  thead: {
+    backgroundColor: '#f0f0f0',
+  },
+  th: {
+    padding: '12px',
+    textAlign: 'left',
+    fontWeight: 'bold',
+    borderBottom: '2px solid #ddd',
+  },
+  td: {
+    padding: '12px',
+    borderBottom: '1px solid #eee',
+  },
+  emptyRow: {
+    textAlign: 'center',
+    padding: '1rem',
+    color: '#999',
+  },
 };
 
 export default Devices;

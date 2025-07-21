@@ -99,7 +99,7 @@ const styles = {
 };
 
 const menuItems = [
-  { path: '/User', label: 'user' },
+  { path: '/user', label: 'User' },
   { path: '/devices', label: 'Devices' },
   { path: '/deviceAnalysis', label: 'Device Analysis' },
   { path: '/deviceRegenHistory', label: 'Device History' },

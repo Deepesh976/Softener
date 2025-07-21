@@ -33,11 +33,6 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     localStorage.clear();
     return <Navigate to="/" replace />;
   }
-
-  if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
-    return <Navigate to="/unauthorized" replace />;
-  }
-
   return children;
 };
 

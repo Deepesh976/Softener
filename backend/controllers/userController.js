@@ -1,166 +1,146 @@
-const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 // Register a new user
 const registerUser = async (req, res) => {
-  console.log("Register request body:", req.body);
   try {
-    const { user, phoneNo, location, password, confirmPassword } = req.body;
+    const { user, phoneNo, password, location } = req.body;
 
-    if (!user?.trim() || !phoneNo?.trim() || !location?.trim() || !password || !confirmPassword) {
+    if (!user?.trim() || !phoneNo?.trim() || !password || !location?.trim()) {
       return res.status(400).json({ message: 'All fields are required' });
-    }
-
-    if (password !== confirmPassword) {
-      return res.status(400).json({ message: 'Passwords do not match' });
     }
 
     const existingUser = await User.findOne({ phoneNo });
     if (existingUser) {
-      return res.status(400).json({ message: 'Phone number already registered' });
+      return res.status(409).json({ message: 'Phone number already registered' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
     const newUser = new User({
       user: user.trim(),
       phoneNo: phoneNo.trim(),
-      location: location.trim(),
       password: hashedPassword,
-      registeredAt: new Date()
+      location: location.trim()
     });
 
     await newUser.save();
-
-    res.status(201).json({
-      message: 'User registered successfully',
-      user: {
-        id: newUser._id,
-        user: newUser.user,
-        phoneNo: newUser.phoneNo,
-        location: newUser.location,
-        registeredAt: newUser.registeredAt
-      }
-    });
+    res.status(201).json({ message: 'User registered successfully' });
   } catch (error) {
-    console.error('Register Error:', error);
-    res.status(500).json({ message: 'Error registering user', error: error.message });
+    console.error('Registration Error:', error);
+    res.status(500).json({ message: 'Server error during registration' });
   }
 };
 
 // Login user
 const loginUser = async (req, res) => {
-  const { phoneNo, password } = req.body;
-
-  if (!phoneNo?.trim() || !password) {
-    return res.status(400).json({ message: 'Phone number and password are required' });
-  }
-
   try {
-    const user = await User.findOne({ phoneNo: phoneNo.trim() });
+    const { phoneNo, password } = req.body;
+
+    if (!phoneNo || !password) {
+      return res.status(400).json({ message: 'Phone number and password are required' });
+    }
+
+    const user = await User.findOne({ phoneNo });
     if (!user) {
-      return res.status(400).json({ message: 'Invalid phone number or password' });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid phone number or password' });
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
+
+    const token = jwt.sign(
+      { id: user._id, phoneNo: user.phoneNo },
+      process.env.JWT_SECRET || 'secretkey',
+      { expiresIn: '1d' }
+    );
+
+    const { password: _, ...userData } = user.toObject();
 
     res.status(200).json({
       message: 'Login successful',
-      user: {
-        id: user._id,
-        user: user.user,
-        phoneNo: user.phoneNo,
-        location: user.location,
-        registeredAt: user.registeredAt
-      }
+      token,
+      user: userData
     });
   } catch (error) {
     console.error('Login Error:', error);
-    res.status(500).json({ message: 'Server error during login', error: error.message });
+    res.status(500).json({ message: 'Server error during login' });
   }
 };
 
-// Get all users
-const getAllUser = async (req, res) => {
+// Get all users (excluding passwords)
+const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({}, "-password -confirmPassword");
+    const users = await User.find({}, '-password');
     res.status(200).json(users);
   } catch (error) {
-    console.error('Fetch user Error:', error);
-    res.status(500).json({ message: "Server error" });
+    console.error('Error fetching users:', error);
+    res.status(500).json({ message: 'Server error fetching users' });
   }
 };
 
-// Get single user
+// Get a single user by ID
 const getSingleUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
+    const user = await User.findById(req.params.id, '-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json(user);
+    res.status(200).json(user);
   } catch (error) {
-    console.error('Get single user error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Fetch User Error:', error);
+    res.status(500).json({ message: 'Server error fetching user' });
   }
 };
 
-// Update user
+// Update user by ID
 const updateUser = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { user, phoneNo, location, password } = req.body;
+    const { user, phoneNo, password, location } = req.body;
 
-    const updateData = {};
-    if (user?.trim()) updateData.user = user.trim();
-    if (phoneNo?.trim()) updateData.phoneNo = phoneNo.trim();
-    if (location?.trim()) updateData.location = location.trim();
+    const updateFields = {
+      ...(user && { user: user.trim() }),
+      ...(phoneNo && { phoneNo: phoneNo.trim() }),
+      ...(location && { location: location.trim() }),
+    };
+
     if (password) {
-      updateData.password = await bcrypt.hash(password, 10);
+      const salt = await bcrypt.genSalt(10);
+      updateFields.password = await bcrypt.hash(password, salt);
     }
 
-    const updatedUser = await User.findByIdAndUpdate(id, updateData, { new: true });
-
-    if (!updatedUser) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    res.status(200).json({
-      message: 'User updated successfully',
-      user: {
-        id: updatedUser._id,
-        user: updatedUser.user,
-        phoneNo: updatedUser.phoneNo,
-        location: updatedUser.location,
-        registeredAt: updatedUser.registeredAt
-      }
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, updateFields, {
+      new: true,
+      select: '-password'
     });
+
+    if (!updatedUser) return res.status(404).json({ message: 'User not found' });
+
+    res.status(200).json({ message: 'User updated successfully', updatedUser });
   } catch (error) {
     console.error('Update Error:', error);
-    res.status(500).json({ message: 'Error updating user', error: error.message });
+    res.status(500).json({ message: 'Server error updating user' });
   }
 };
 
-// Delete user
+// Delete user by ID
 const deleteUser = async (req, res) => {
   try {
-    const user = await User.findByIdAndDelete(req.params.id);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
+    const deletedUser = await User.findByIdAndDelete(req.params.id);
+    if (!deletedUser) return res.status(404).json({ message: 'User not found' });
     res.status(200).json({ message: 'User deleted successfully' });
   } catch (error) {
     console.error('Delete Error:', error);
-    res.status(500).json({ message: 'Error deleting user', error: error.message });
+    res.status(500).json({ message: 'Server error deleting user' });
   }
 };
 
 module.exports = {
   registerUser,
   loginUser,
-  getAllUser,         // ✅ FIXED: now included and correctly named
+  getAllUsers,
   getSingleUser,
   updateUser,
   deleteUser

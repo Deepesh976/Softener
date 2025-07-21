@@ -1,62 +1,51 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const EditDevices = () => {
-  const [searchParams] = useSearchParams();
-  const deviceId = searchParams.get('id');
+  const location = useLocation();
   const navigate = useNavigate();
+  const { device } = location.state || {};
 
   const [deviceData, setDeviceData] = useState({
     deviceId: '',
     user: '',
     phoneNo: '',
-    password: '',
-    confirmPassword: '',
   });
 
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    if (deviceId) {
-      axios
-        .get('http://localhost:5000/api/devices/registered')
-        .then(res => {
-          const device = res.data.find(d => d._id === deviceId);
-          if (device) {
-            setDeviceData({
-              deviceId: device.deviceId,
-              user: device.user,
-              phoneNo: device.phoneNo,
-              password: '',
-              confirmPassword: '',
-            });
-          }
-        })
-        .catch(err => console.error('Error loading device:', err));
+    if (device) {
+      setDeviceData({
+        deviceId: device.deviceId || '',
+        user: device.user || '',
+        phoneNo: device.phoneNo || '',
+      });
     }
-  }, [deviceId]);
+  }, [device]);
 
-  const handleChange = e => {
+  const handleChange = (e) => {
     setDeviceData({
       ...deviceData,
       [e.target.name]: e.target.value,
     });
   };
 
-  const handleUpdate = async e => {
+  const handleUpdate = async (e) => {
     e.preventDefault();
 
-    if (deviceData.password !== deviceData.confirmPassword) {
-      setMessage('❌ Passwords do not match');
+    if (!device || !device._id) {
+      setMessage('❌ Device data is missing');
       return;
     }
 
     try {
-      await axios.put(`http://localhost:5000/api/devices/registered/${deviceId}`, deviceData);
+      await axios.put(`http://localhost:5000/api/devices/registered/${device._id}`, deviceData);
       setMessage('✅ Device updated successfully');
       setTimeout(() => navigate('/devices'), 1000);
     } catch (err) {
+      console.error(err);
       setMessage('❌ Failed to update device');
     }
   };
@@ -95,24 +84,6 @@ const EditDevices = () => {
             required
             style={styles.input}
           />
-          <input
-            name="password"
-            type="password"
-            value={deviceData.password}
-            onChange={handleChange}
-            placeholder="New Password"
-            required
-            style={styles.input}
-          />
-          <input
-            name="confirmPassword"
-            type="password"
-            value={deviceData.confirmPassword}
-            onChange={handleChange}
-            placeholder="Confirm Password"
-            required
-            style={styles.input}
-          />
           <button type="submit" style={styles.button}>
             Update Device
           </button>
@@ -122,7 +93,6 @@ const EditDevices = () => {
   );
 };
 
-// Responsive styles
 const styles = {
   container: {
     paddingTop: '100px',

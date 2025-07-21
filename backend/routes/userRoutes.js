@@ -1,32 +1,21 @@
 const express = require('express');
 const router = express.Router();
+
 const {
   registerUser,
   loginUser,
-  getAlluser,
+  getAllUsers, // ✅ Make sure this matches exactly
   getSingleUser,
   updateUser,
   deleteUser
-} = require('../controllers/userController');
+} = require('../controllers/userController'); // ✅ Correct path to your controller
 
-// USER ROUTES - All prefixed with /api/user
-
-// Register a new user
+// Routes
 router.post('/register', registerUser);
-
-// Login with phone number and password
 router.post('/login', loginUser);
-
-// Get all registered user
-router.get('/all', getAlluser);
-
-// Get a single user by ID
+router.get('/all', getAllUsers); // ✅ This line uses imported function
 router.get('/:id', getSingleUser);
-
-// Update a user by ID
-router.put('/update/:id', updateUser);
-
-// Delete a user by ID
-router.delete('/delete/:id', deleteUser);
+router.put('/:id', updateUser);
+router.delete('/:id', deleteUser);
 
 module.exports = router;

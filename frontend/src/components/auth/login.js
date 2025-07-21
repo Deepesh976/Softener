@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -161,6 +161,19 @@ const Login = () => {
   const [btnHover, setBtnHover] = useState(false);
   const navigate = useNavigate();
 
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const expiry = localStorage.getItem('expiry');
+
+    if (token && expiry && Date.now() < Number(expiry)) {
+      navigate('/user', { replace: true });
+    } else {
+      // Clear outdated session
+      localStorage.clear();
+    }
+  }, [navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -170,21 +183,23 @@ const Login = () => {
     }
 
     try {
-      const res = await axios.post('http://localhost:5000/api/devices/registered/login', {
+      const res = await axios.post('http://localhost:5000/api/user/login', {
         phoneNo,
         password,
       });
 
-      const { token = 'dummyToken', role = 'device' } = res.data;
+      const { token = 'dummyToken', userId, role } = res.data;
       const expiry = Date.now() + 60 * 60 * 1000; // 1 hour
 
+      // Store token and user details
       localStorage.setItem('token', token);
-      localStorage.setItem('role', role);
+      localStorage.setItem('userId', userId);
       localStorage.setItem('phoneNo', phoneNo);
+      localStorage.setItem('role', role);
       localStorage.setItem('expiry', expiry.toString());
 
       toast.success('Login successful!');
-      navigate('/devices', { replace: true }); // Prevent back nav
+      navigate('/user', { replace: true });
     } catch (err) {
       console.error(err);
       toast.error('Invalid phone number or password');
@@ -215,7 +230,7 @@ const Login = () => {
           <div style={styles.signinSignup}>
             <form style={styles.form} onSubmit={handleSubmit}>
               <img src="/logo.png" alt="Logo" style={styles.logo} />
-              <h2 style={styles.title}>Login</h2>
+              <h2 style={styles.title}>User Login</h2>
 
               <div style={styles.inputField}>
                 <i className="fas fa-phone" style={styles.inputIcon}></i>
@@ -226,6 +241,7 @@ const Login = () => {
                   value={phoneNo}
                   onChange={(e) => setPhoneNo(e.target.value)}
                   maxLength={10}
+                  required
                 />
               </div>
 
@@ -237,6 +253,7 @@ const Login = () => {
                   style={styles.input}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  required
                 />
                 <button
                   type="button"

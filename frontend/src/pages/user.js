@@ -125,7 +125,7 @@ useEffect(() => {
   };
 
   return (
-    <div style={{ padding: '80px 20px 30px', fontFamily: 'Poppins, sans-serif', backgroundColor: '#f9f9f9', minHeight: '100vh' }}>
+    <div style={{ padding: '1px 20px 30px', fontFamily: 'Poppins, sans-serif', backgroundColor: '#f9f9f9', minHeight: '100vh' }}>
       <h2 style={{ fontSize: '2rem', color: '#003366', marginBottom: '1rem', textAlign: 'center' }}>
         User Registration
       </h2>
