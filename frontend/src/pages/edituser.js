@@ -63,7 +63,7 @@ const EditUser = () => {
         payload.password = userData.password.trim();
       }
 
-      await axios.put(`http://localhost:5000/api/user/update/${userId}`, payload);
+await axios.put(`http://localhost:5000/api/user/${userId}`, payload);
 
       setMessage('✅ User updated successfully');
       setTimeout(() => {

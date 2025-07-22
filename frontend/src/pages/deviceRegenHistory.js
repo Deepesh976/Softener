@@ -49,7 +49,7 @@ const DeviceRegenHistory = () => {
 
   const styles = {
     container: {
-      padding: '100px 30px 30px',
+      padding: '20px 30px 30px',
       fontFamily: 'Segoe UI, sans-serif',
       backgroundColor: '#f4f6f8',
       minHeight: '100vh',
